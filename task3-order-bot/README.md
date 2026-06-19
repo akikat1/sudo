@@ -31,31 +31,16 @@ pip install -r requirements.txt
 
 Откройте `bot.py` и задайте:
 
-**Токен бота** — один из двух способов:
-
-```python
-# Способ 1: переменная окружения (рекомендуется)
-# Windows:
-set BOT_TOKEN=ваш_токен
-# Linux/Mac:
-export BOT_TOKEN=ваш_токен
-
-# Способ 2: напрямую в коде (для тестирования)
-BOT_TOKEN = "ваш_токен"
-```
-
-**ADMIN_CHAT_ID** — ваш Telegram ID для получения уведомлений о заказах:
-
-```python
-ADMIN_CHAT_ID = 123456789
-```
+**Токен бота и ADMIN_CHAT_ID** хранятся в корневом файле
+`private_config.py`. Скопируйте `private_config.example.py` как
+`private_config.py` и заполните значения. Этот файл исключён из Git.
 
 > 💡 Чтобы узнать свой Telegram ID, отправьте любое сообщение боту [@userinfobot](https://t.me/userinfobot)
 
 ### 4. Запуск
 
 ```bash
-python bot.py
+python task3-order-bot/bot.py
 ```
 
 ## 🏗 Деплой на сервер

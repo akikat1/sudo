@@ -4,10 +4,11 @@ Telegram Order Bot — Кафе «Шафран», г. Алматы
 aiogram 3.x (Router pattern)
 """
 
-import os
 import asyncio
 import logging
+import sys
 from datetime import datetime
+from pathlib import Path
 
 from aiogram import Bot, Dispatcher, Router, F
 from aiogram.types import (
@@ -23,11 +24,25 @@ from aiogram.fsm.storage.memory import MemoryStorage
 # ──────────────────────────────────────────────
 # Конфигурация
 # ──────────────────────────────────────────────
-BOT_TOKEN = os.getenv("BOT_TOKEN", "8938709080:AAGwx1BxPRLecyv-UF-XvoVK90ji4kJwWIA")
-ADMIN_CHAT_ID = 841509225  # Telegram ID администратора
+PROJECT_DIR = Path(__file__).resolve().parent.parent
+if str(PROJECT_DIR) not in sys.path:
+    sys.path.insert(0, str(PROJECT_DIR))
+
+try:
+    from private_config import ADMIN_CHAT_ID, ORDER_BOT_TOKEN
+except ImportError as error:
+    raise RuntimeError(
+        "Не найден private_config.py. Скопируйте private_config.example.py "
+        "как private_config.py и заполните ключи."
+    ) from error
+
+BOT_TOKEN = ORDER_BOT_TOKEN
 
 CAFE_NAME = "Шафран"
 CAFE_CITY = "Алматы"
+CAFE_PHONE = "+7 706 400-86-92"
+SITE_URL = "https://sudo.akikating123.workers.dev/"
+QR_MENU_URL = "https://sudo.akikating123.workers.dev/qr_menu.html"
 
 # ──────────────────────────────────────────────
 # Меню (категория → список товаров)
@@ -98,6 +113,16 @@ def main_menu_kb() -> ReplyKeyboardMarkup:
         ],
         resize_keyboard=True,
     )
+
+
+def website_links_kb() -> InlineKeyboardMarkup:
+    """Постоянные ссылки на главный сайт и полное QR-меню."""
+    return InlineKeyboardMarkup(inline_keyboard=[
+        [
+            InlineKeyboardButton(text="🏠 Главный сайт", url=SITE_URL),
+            InlineKeyboardButton(text="📱 QR-меню", url=QR_MENU_URL),
+        ],
+    ])
 
 
 def categories_kb() -> InlineKeyboardMarkup:
@@ -226,6 +251,10 @@ async def cmd_start(message: Message, state: FSMContext):
         reply_markup=main_menu_kb(),
         parse_mode="HTML",
     )
+    await message.answer(
+        "Сайт кафе и полное QR-меню:",
+        reply_markup=website_links_kb(),
+    )
     await state.set_state(OrderState.main_menu)
 
 
@@ -234,9 +263,19 @@ async def cmd_help(message: Message):
     await message.answer(
         "🤖 <b>Команды бота:</b>\n"
         "/start — Перезапуск бота\n"
-        "/help — Справка\n\n"
+        "/help — Справка\n"
+        "/links — Сайт и QR-меню\n\n"
         "Используйте кнопки меню для навигации.",
+        reply_markup=website_links_kb(),
         parse_mode="HTML",
+    )
+
+
+@router.message(Command("links"))
+async def cmd_links(message: Message):
+    await message.answer(
+        "Выберите, что открыть:",
+        reply_markup=website_links_kb(),
     )
 
 
@@ -263,10 +302,12 @@ async def show_cart_reply(message: Message, state: FSMContext):
 async def show_contacts(message: Message):
     await message.answer(
         f"📞 <b>Кафе «{CAFE_NAME}»</b>\n\n"
-        f"📍 г. {CAFE_CITY}\n"
-        "☎️ +7 (727) 123-45-67\n"
-        "🕐 Пн-Вс: 10:00 — 22:00\n"
-        "📸 Instagram: @cafe_yantar",
+        f"📍 г. {CAFE_CITY}, ул. Панфилова, 78\n"
+        f"☎️ {CAFE_PHONE}\n"
+        "🕐 Пн–Пт: 09:00–23:00\n"
+        "🕐 Сб–Вс: 10:00–00:00\n"
+        "📸 Instagram: @shafran.kz",
+        reply_markup=website_links_kb(),
         parse_mode="HTML",
     )
 
@@ -546,6 +587,10 @@ async def cb_order_confirm(callback: CallbackQuery, state: FSMContext, bot: Bot)
     await state.clear()
     await state.update_data(cart=[])
     await callback.message.answer("Вернуться в меню 👇", reply_markup=main_menu_kb())
+    await callback.message.answer(
+        "Посмотреть сайт или полное QR-меню:",
+        reply_markup=website_links_kb(),
+    )
     await state.set_state(OrderState.main_menu)
     await callback.answer("Заказ оформлен! ✅")
 

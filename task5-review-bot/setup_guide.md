@@ -37,13 +37,14 @@ pip install -r requirements.txt
 
 ## 3. Где вставить токен
 
-Откройте файл `review_bot.py` и замените значение константы `BOT_TOKEN` на ваш токен:
+В корне проекта скопируйте `private_config.example.py` как
+`private_config.py` и вставьте токен в переменную:
 
 ```python
-BOT_TOKEN = "123456789:ABCdefGHIjklMNOpqrsTUVwxyz"
+REVIEW_BOT_TOKEN = "123456789:ABCdefGHIjklMNOpqrsTUVwxyz"
 ```
 
-> ⚠️ Не публикуйте токен в открытых репозиториях!
+`private_config.py` уже добавлен в `.gitignore` и не публикуется в GitHub.
 
 ---
 
@@ -151,7 +152,7 @@ sudo systemctl status review-bot
 
 📍 Город: Алматы
 📍 Адрес: ул. Панфилова, 78
-📱 Телефон: +7 (727) 234-56-78
+📱 Телефон: +7 706 400-86-92
 📩 Instagram: @shafran_almaty
 
 Мы всегда на связи!

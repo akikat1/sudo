@@ -1,0 +1,2 @@
+python-telegram-bot==21.10
+google-genai>=1.20.0,<2.0.0

@@ -1,5 +1,8 @@
 # review_bot.py — Telegram-бот для сбора отзывов кафе «Шафран», г. Алматы
-# python-telegram-bot 20.7 | Python 3.10+
+# python-telegram-bot 21.10 | Python 3.10+
+
+import sys
+from pathlib import Path
 
 from telegram import InlineKeyboardButton, InlineKeyboardMarkup, Update
 from telegram.ext import (
@@ -13,10 +16,25 @@ from telegram.ext import (
 # Константы
 # ──────────────────────────────────────────────
 
-BOT_TOKEN = "8601645331:AAH39HHkGRQ2i119vM78XguaSygVVVLcC1A"
+PROJECT_DIR = Path(__file__).resolve().parent.parent
+if str(PROJECT_DIR) not in sys.path:
+    sys.path.insert(0, str(PROJECT_DIR))
+
+try:
+    from private_config import REVIEW_BOT_TOKEN
+except ImportError as error:
+    raise RuntimeError(
+        "Не найден private_config.py. Скопируйте private_config.example.py "
+        "как private_config.py и заполните ключи."
+    ) from error
+
+BOT_TOKEN = REVIEW_BOT_TOKEN
 
 VENUE_NAME = "Шафран"
 CITY = "Алматы"
+PHONE = "+7 706 400-86-92"
+SITE_URL = "https://sudo.akikating123.workers.dev/"
+QR_MENU_URL = "https://sudo.akikating123.workers.dev/qr_menu.html"
 
 REVIEW_LINK_2GIS = "https://go.2gis.com/shafran-almaty"
 REVIEW_LINK_GOOGLE = "https://g.page/r/shafran-almaty/review"
@@ -46,7 +64,7 @@ CONTACT_TEXT = (
     f"📞 Связаться с «{VENUE_NAME}»:\n\n"
     f"📍 Город: {CITY}\n"
     "📍 Адрес: ул. Панфилова, 78\n"
-    "📱 Телефон: +7 (727) 234-56-78\n"
+    f"📱 Телефон: {PHONE}\n"
     "📩 Instagram: @shafran_almaty\n\n"
     "Мы всегда на связи!"
 )
@@ -59,8 +77,20 @@ user_data: dict[int, str] = {}
 # ──────────────────────────────────────────────
 
 
+def website_links_keyboard() -> InlineKeyboardMarkup:
+    """Кнопки для перехода на сайт кафе и в QR-меню."""
+    return InlineKeyboardMarkup(
+        [
+            [
+                InlineKeyboardButton("🏠 Главный сайт", url=SITE_URL),
+                InlineKeyboardButton("📱 QR-меню", url=QR_MENU_URL),
+            ]
+        ]
+    )
+
+
 async def start_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-    """Приветственное сообщение с двумя кнопками."""
+    """Приветственное сообщение с действиями и ссылками на сайт."""
     keyboard = InlineKeyboardMarkup(
         [
             [
@@ -75,9 +105,21 @@ async def start_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -> N
                     callback_data="contact",
                 )
             ],
+            [
+                InlineKeyboardButton("🏠 Главный сайт", url=SITE_URL),
+                InlineKeyboardButton("📱 QR-меню", url=QR_MENU_URL),
+            ],
         ]
     )
     await update.message.reply_text(WELCOME_TEXT, reply_markup=keyboard)
+
+
+async def links_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    """Команда /links — быстрый переход к сайту и меню."""
+    await update.message.reply_text(
+        "Выберите, что открыть:",
+        reply_markup=website_links_keyboard(),
+    )
 
 
 async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
@@ -89,7 +131,10 @@ async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
         chat_id = query.message.chat_id
         user_data[chat_id] = "waiting_review"
 
-        await query.edit_message_text(CONFIRMATION_TEXT)
+        await query.edit_message_text(
+            CONFIRMATION_TEXT,
+            reply_markup=website_links_keyboard(),
+        )
 
         # Планируем отправку просьбы об отзыве через DELAY_HOURS
         context.job_queue.run_once(
@@ -100,7 +145,10 @@ async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
         )
 
     elif query.data == "contact":
-        await query.edit_message_text(CONTACT_TEXT)
+        await query.edit_message_text(
+            CONTACT_TEXT,
+            reply_markup=website_links_keyboard(),
+        )
 
 
 async def send_review_request(context: ContextTypes.DEFAULT_TYPE) -> None:
@@ -112,7 +160,11 @@ async def send_review_request(context: ContextTypes.DEFAULT_TYPE) -> None:
             [
                 InlineKeyboardButton("📍 Отзыв на 2ГИС", url=REVIEW_LINK_2GIS),
                 InlineKeyboardButton("🗺 Отзыв на Google", url=REVIEW_LINK_GOOGLE),
-            ]
+            ],
+            [
+                InlineKeyboardButton("🏠 Главный сайт", url=SITE_URL),
+                InlineKeyboardButton("📱 QR-меню", url=QR_MENU_URL),
+            ],
         ]
     )
 
@@ -134,6 +186,7 @@ def main() -> None:
     app = ApplicationBuilder().token(BOT_TOKEN).build()
 
     app.add_handler(CommandHandler("start", start_handler))
+    app.add_handler(CommandHandler("links", links_handler))
     app.add_handler(CallbackQueryHandler(button_handler))
 
     print(f"Бот «{VENUE_NAME}» запущен ✅")
